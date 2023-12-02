@@ -1,46 +1,221 @@
-﻿namespace Day1
+﻿using System.Security;
+
+namespace Day1
 {
   //https://adventofcode.com/2023/day/1
   internal class Program
   {
+    static Dictionary<string, int> _spelledValues = new(StringComparer.OrdinalIgnoreCase)
+    {
+      { "one" , 1},
+      { "two" , 2},
+      { "three" ,3},
+      { "four" , 4},
+      { "five" , 5},
+      { "six" , 6},
+      { "seven" , 7},
+      { "eight" , 8},
+      { "nine" , 9},
+      { "ten" , 10},
+    };
+
     static void Main()
     {
       var lines = _input.Split(Environment.NewLine);
 
+      Console.WriteLine("=== PART 1 ===");
+
       var sum = 0;
       foreach (var line in lines)
       {
-        var firstDigit = GetFirstDigit(line);
-        var secondDigit = GetLastDigit(line);
+        var firstDigit = GetFirstDigitOfIntegerLiteral(line)?.Value ?? 0;
+        var secondDigit = GetLastDigitOfIntegerLiteral(line)?.Value ?? 0;
 
         var calibrationNumber = firstDigit * 10 + secondDigit;
         sum += calibrationNumber;
       }
 
-      Console.WriteLine("Result: " + sum);
+      Console.WriteLine("Sum of calibration values: " + sum);
+      Console.WriteLine("=== PART 2 ===");
+
+      sum = 0;
+      foreach (var line in lines)
+      {
+        var firstDigit = GetFirstDigit(line) ?? 0;
+        var secondDigit = GetLastDigit(line) ?? 0;
+
+        var calibrationNumber = firstDigit * 10 + secondDigit;
+        sum += calibrationNumber;
+      }
+
+      Console.WriteLine("Sum of calibration values: " + sum);
       Console.ReadLine();
     }
 
-    private static int GetFirstDigit(string input)
+    private static int? GetFirstDigit(string input)
     {
-      return GetDigit(input, str => str.FirstOrDefault(c => char.IsDigit(c)));
-    }
+      var stringSource = GetFirstDigitFromString(input);
+      var integerLiteralSource = GetFirstDigitOfIntegerLiteral(input);
 
-    private static int GetLastDigit(string input)
-    {
-      return GetDigit(input, str => str.LastOrDefault(c => char.IsDigit(c)));
-    }
-
-    private static int GetDigit(string input, Func<string, char> selector)
-    {
-      var digit = selector(input);      
-      if (digit == default)
+      if(stringSource is null && integerLiteralSource is null)
       {
-        return 0;
+        // source does not contain any integer values
+        return null;
       }
 
-      var number = char.GetNumericValue(digit);
-      return Convert.ToInt32(number);
+      if(stringSource is null || integerLiteralSource is null)
+      {
+        // one of the values is null => return the non-null value
+        if(stringSource is not null)
+        {
+          return stringSource.Value.Value;
+        }
+
+        if(integerLiteralSource is not null)
+        {
+          return integerLiteralSource.Value.Value;
+        }
+      }
+
+      // both are found => return the one with lower index
+      var stringSourceIndex = stringSource!.Value.Index;
+      var intLiteralSourceIndex = integerLiteralSource!.Value.Index;
+
+      if(stringSourceIndex <= intLiteralSourceIndex)
+      {
+        // string representation of number is first
+        return stringSource.Value.Value;
+      }
+
+      // integer literal is first
+      return integerLiteralSource.Value.Value;
+    }
+
+    private static int? GetLastDigit(string input)
+    {
+      var stringSource = GetLastDigitFromString(input);
+      var integerLiteralSource = GetLastDigitOfIntegerLiteral(input);
+
+      if (stringSource is null && integerLiteralSource is null)
+      {
+        // source does not contain any integer values
+        return null;
+      }
+
+      if (stringSource is null || integerLiteralSource is null)
+      {
+        // one of the values is null => return the non-null value
+        if (stringSource is not null)
+        {
+          return stringSource.Value.Value;
+        }
+
+        if (integerLiteralSource is not null)
+        {
+          return integerLiteralSource.Value.Value;
+        }
+      }
+
+      // both are found => return the one with higher index
+      var stringSourceIndex = stringSource!.Value.Index;
+      var intLiteralSourceIndex = integerLiteralSource!.Value.Index;
+
+      if (stringSourceIndex >= intLiteralSourceIndex)
+      {
+        // string representation of number is last
+        return stringSource.Value.Value;
+      }
+
+      // integer literal is last
+      return integerLiteralSource.Value.Value;
+    }
+
+    private static (int Value, int Index)? GetFirstDigitOfIntegerLiteral(string input)
+    {
+      for (int index = 0; index < input.Length; index++)
+      {
+        char @char = input[index];
+        if (char.IsDigit(@char))
+        {
+          var number = char.GetNumericValue(@char);
+          return (Convert.ToInt32(number), index);
+        }
+      }
+
+      return null;
+    }
+
+    private static (int Value, int Index)? GetLastDigitOfIntegerLiteral(string input)
+    {
+      for (int index = input.Length - 1; index >= 0; index--)
+      {
+        char @char = input[index];
+        if (char.IsDigit(@char))
+        {
+          var number = char.GetNumericValue(@char);
+          return (Convert.ToInt32(number), index);
+        }
+      }
+
+      return null;
+    }
+
+    private static (int Value, int Index)? GetFirstDigitFromString(string input)
+    {
+      var minIndex = -1;
+      KeyValuePair<string, int>? value = null;
+
+      foreach (var spelledValue in _spelledValues)
+      {
+        var index = input.IndexOf(spelledValue.Key, StringComparison.OrdinalIgnoreCase);
+        if(index == -1)
+        {
+          continue;
+        }
+
+        if (index < minIndex || minIndex == -1)
+        {
+          minIndex = index;
+          value = spelledValue;
+        }
+      }
+
+      if (value is not null)
+      {
+        // lol
+        return (value.Value.Value, minIndex);
+      }
+
+      return null;
+    }
+
+    private static (int Value, int Index)? GetLastDigitFromString(string input)
+    {
+      var maxIndex = -1;
+      KeyValuePair<string, int>? value = null;
+
+      foreach (var spelledValue in _spelledValues)
+      {
+        var index = input.LastIndexOf(spelledValue.Key, StringComparison.OrdinalIgnoreCase);
+        if (index == -1)
+        {
+          continue;
+        }
+
+        if (index > maxIndex || maxIndex == -1)
+        {
+          maxIndex = index;
+          value = spelledValue;
+        }
+      }
+
+      if (value is not null)
+      {
+        // lol
+        return (value.Value.Value, maxIndex);
+      }
+
+      return null;
     }
 
     internal const string _input = @"
