@@ -29,43 +29,30 @@ namespace Day4
       Console.WriteLine("Result: " + result);
       Console.WriteLine("--== PART TWO ==--");
 
-      var cardsMemory = new Dictionary<int, int>();
-      foreach (var card in cards)
-      {
-        if(cardsMemory.TryGetValue(card.Nr, out var currentCardCout))
-        {
-          cardsMemory[card.Nr] = currentCardCout + 1;
-        }
-        else
-        {
-          cardsMemory[card.Nr] = 1;
-        }
+      var cardsMemory = new int[cards.Count]; // not so efficient
+      Array.Fill(cardsMemory, 0);
 
-        for (int i = 0; i < cardsMemory[card.Nr]; i++)
+      for (int cardIndex = 0; cardIndex < cards.Count; cardIndex++)
+      {
+        Card? card = cards[cardIndex];
+        cardsMemory[cardIndex] = cardsMemory[cardIndex] + 1;
+
+        for (int i = 0; i < cardsMemory[cardIndex]; i++)
         {
-          var winningNumbersCount = card.WinningNumbers.Where(card.CardNumbers.Contains).Count();
+          var winningNumbersCount = card.WinningNumbers.Intersect(card.CardNumbers).Count();
           if (winningNumbersCount == 0)
           {
             break;
           }
-
-          var lastCopiedCardNr = card.Nr + winningNumbersCount;
           for (int copiedCard = 1; copiedCard <= winningNumbersCount; copiedCard++)
           {
-            var copyCardNr = card.Nr + copiedCard;
-            if (cardsMemory.TryGetValue(copyCardNr, out var cardsCount))
-            {
-              cardsMemory[copyCardNr] = cardsCount + 1;
-            }
-            else
-            {
-              cardsMemory[copyCardNr] = 1;
-            }
+            var copyCardIndex = card.Nr + copiedCard - 1;
+            cardsMemory[copyCardIndex] = cardsMemory[copyCardIndex] + 1;
           }
         }
       }
 
-      Console.WriteLine("Result: " + cardsMemory.Values.Sum());
+      Console.WriteLine("Result: " + cardsMemory.Sum());
     }
 
     private static IEnumerable<Card> ToCards(string input)
