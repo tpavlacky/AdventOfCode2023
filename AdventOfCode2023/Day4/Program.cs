@@ -106,22 +106,9 @@ namespace Day4
 
     private static int CalculateCardValue(Card card)
     {
-      var result = 0;
-      var multiplier = 1;
-      foreach (var winningNr in card.WinningNumbers)
-      {
-        if (card.CardNumbers.Contains(winningNr))
-        {
-          var value = result == 0 ? 1 : result;
-          result = (value * multiplier);
-          if(multiplier == 1)
-          {
-            multiplier = 2;
-          }
-        }
-      }
+      var winningNumbersCount = card.WinningNumbers.Intersect(card.CardNumbers).Count();
 
-      return result;
+      return (int)(Math.Pow(2, winningNumbersCount - 1));
     }
 
     internal static string _input = """
