@@ -2,16 +2,36 @@
 {
   internal class Program
   {
-    static void Main(string[] args)
+    static void Main()
     {
       var races = LoadRaces(_input).ToList();
-      var result = races.Select(GetNumbersOfWayHowToWin).Aggregate(1, (a, b) => a * b);
+      var result = races
+        .Select(GetNumbersOfWayHowToWin)
+        .Aggregate(1, (a, b) => a * b);
+
+      Console.WriteLine("--== PART 1 ==--");
       Console.WriteLine(result);
+
+      var timePart2 = string.Empty;
+      var distancePart2 = string.Empty;
+
+      foreach (var race in races)
+      {
+        timePart2 += race.Time;
+        distancePart2 += race.Distance;
+      }
+
+      Console.WriteLine(timePart2);
+      Console.WriteLine("--== PART 2 ==--");
+
+      var res = GetNumbersOfWayHowToWin(new Race(long.Parse(timePart2), long.Parse(distancePart2)));
+
+      Console.WriteLine(res);
     }
 
     private static int GetNumbersOfWayHowToWin(Race race)
     {
-      var res = Enumerable.Range(0, race.Time)
+      var res = Enumerable.Range(0, (int)race.Time)
         .Select(i => CalculateRaceTime(i, race.Time))
         .Where(raceTime => raceTime > race.Distance)
         .Count();
@@ -19,7 +39,7 @@
       return res;
     }
 
-    private static int CalculateRaceTime(int waitTime, int raceDuration)
+    private static long CalculateRaceTime(long waitTime, long raceDuration)
     {
       if (waitTime <= 0) 
       {
@@ -58,5 +78,5 @@
       """;
   }
 
-  internal record Race(int Time, int Distance);
+  internal record Race(long Time, long Distance);
 }
