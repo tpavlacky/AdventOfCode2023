@@ -1,17 +1,32 @@
-﻿namespace Day7
+﻿using System.Globalization;
+
+namespace Day7
 {
   internal class Program
   {
-    static void Main(string[] args)
+    static void Main()
     {
       var hands = ParseGame(_input).ToList();
 
+      int partOneResult = CalculatePartOne(hands);
+
+      Console.WriteLine("--== PART 1 ==--");
+      Console.WriteLine(partOneResult);
+
+      var partTwoResult = CalculatePartTwo(hands);
+
+      Console.WriteLine("--== PART 2 ==--");
+      Console.WriteLine(partTwoResult);
+    }
+
+    private static int CalculatePartOne(List<Hand> hands)
+    {
       var handsByType = new Dictionary<int, List<Hand>>();
 
       foreach (var hand in hands)
       {
-        var handType = GetHandType(hand);
-        if(handsByType.TryGetValue(handType, out var handsOfType))
+        var handType = GetHandType(hand.Cards, false);
+        if (handsByType.TryGetValue(handType, out var handsOfType))
         {
           handsOfType.Add(hand);
         }
@@ -25,7 +40,7 @@
       var rank = 0;
       foreach (var handsOfType in handsByType.OrderBy(kvp => kvp.Key))
       {
-        handsOfType.Value.Sort();
+        handsOfType.Value.Sort(new PartOneComparer());
 
         foreach (var hand in handsOfType.Value)
         {
@@ -33,17 +48,86 @@
         }
       }
 
-      Console.WriteLine(result);
+      return result;
     }
 
-    private static int GetHandType(Hand hand)
+    private static int CalculatePartTwo(List<Hand> hands)
     {
-      var group = hand.Cards.GroupBy(i => i).ToList();
+      var handsByType = new Dictionary<int, List<Hand>>();
+
+      foreach (var hand in hands)
+      {
+        int handType = 0;
+        handType = GetHandType(hand.Cards, true);
+
+        if (handsByType.TryGetValue(handType, out var handsOfType))
+        {
+          handsOfType.Add(hand);
+        }
+        else
+        {
+          handsByType[handType] = new List<Hand>() { hand };
+        }
+      }
+
+      var result = 0;
+      var rank = 0;
+      foreach (var handsOfType in handsByType.OrderBy(kvp => kvp.Key))
+      {
+        handsOfType.Value.Sort(new PartTwoComparer());
+
+        foreach (var hand in handsOfType.Value)
+        {
+          result += hand.Bid * ++rank;
+        }
+      }
+
+      return result;
+    }
+
+    private static int GetHandType(string cards, bool withJokers = false)
+    {
+      var tmpCards = string.Empty;
+      if (withJokers)
+      {
+        tmpCards = cards.Replace("J", string.Empty);
+      }
+
+      var group = tmpCards
+        .GroupBy(i => i, (card, chars) => (Card: card, Count: chars.Count()))
+        .OrderByDescending(i => i.Count)
+        .ToList();
+
+      if (withJokers)
+      {
+        var jokersCount = cards.Where(card => card == 'J').Count();
+
+        if (jokersCount == 0)
+        {
+          return GetHandType(group);
+        }
+
+        if (jokersCount == 5)
+        {
+          return 7;
+        }
+
+        group[0] = (group[0].Card, group[0].Count + jokersCount);
+        return GetHandType(group);
+      }
+      else
+      {
+        return GetHandType(group);
+      }
+    }
+
+    private static int GetHandType(List<(char Card, int Count)> group)
+    {
       if (IsFiveOfKind(group))
       {
         return 7;
       }
-      
+
       if (IsFourOfKind(group))
       {
         return 6;
@@ -77,37 +161,37 @@
       return 0;
     }
 
-    private static bool IsFiveOfKind(List<IGrouping<char, char>> hand)
+    private static bool IsFiveOfKind(List<(char Card, int Count)> hand)
     {
       return hand.Count == 1;
     }
 
-    private static bool IsFourOfKind(List<IGrouping<char, char>> hand)
+    private static bool IsFourOfKind(List<(char Card, int Count)> hand)
     {
-      return hand.Count == 2 && hand.Any(grp => grp.Count() == 4);
+      return hand.Count == 2 && hand.Any(grp => grp.Count == 4);
     }
 
-    private static bool IsFullHouse(List<IGrouping<char, char>> hand)
+    private static bool IsFullHouse(List<(char Card, int Count)> hand)
     {
-      return hand.Count == 2 && hand .Any(grp => grp.Count() == 2);
+      return hand.Count == 2 && hand.Any(grp => grp.Count == 2);
     }
 
-    private static bool IsThreeOfKind(List<IGrouping<char, char>> hand)
+    private static bool IsThreeOfKind(List<(char Card, int Count)> hand)
     {
-      return hand.Count == 3 && hand.Any(grp => grp.Count() == 3);
+      return hand.Count == 3 && hand.Any(grp => grp.Count == 3);
     }
 
-    private static bool IsTwoPair(List<IGrouping<char, char>> hand)
+    private static bool IsTwoPair(List<(char Card, int Count)> hand)
     {
-      return hand.Count == 3 && hand.Any(grp => grp.Count() == 2) && hand.Any(grp => grp.Count() == 1);
+      return hand.Count == 3 && hand.Any(grp => grp.Count == 2) && hand.Any(grp => grp.Count == 1);
     }
 
-    private static bool IsOnePair(List<IGrouping<char, char>> hand)
+    private static bool IsOnePair(List<(char Card, int Count)> hand)
     {
-      return hand.Count == 4 && hand.Any(grp => grp.Count() == 2);
+      return hand.Count == 4 && hand.Any(grp => grp.Count == 2);
     }
 
-    private static bool IsHighCard(List<IGrouping<char, char>> hand)
+    private static bool IsHighCard(List<(char Card, int Count)> hand)
     {
       return hand.Count == 5;
     }
@@ -122,19 +206,23 @@
       }
     }
 
-    private record Hand(string Cards, int Bid) : IComparable<Hand>
+    private record Hand(string Cards, int Bid)
     {
-      public int CompareTo(Hand? other)
+    }
+
+    private class PartOneComparer : IComparer<Hand>
+    {
+      public int Compare(Hand? x, Hand? y)
       {
-        for(var i = 0; i < Cards.Length; i++)
+        for (var i = 0; i < x.Cards.Length; i++)
         {
-          var card = Cards[i];
-          var otherCard = other!.Cards[i];
+          var card = x.Cards[i];
+          var otherCard = y!.Cards[i];
 
           var strOfCard = GetStrOfCard(card);
           var strOfOtherCard = GetStrOfCard(otherCard);
 
-          if(strOfCard > strOfOtherCard)
+          if (strOfCard > strOfOtherCard)
           {
             return 1;
           }
@@ -151,24 +239,72 @@
       {
         return _cardToStr[card];
       }
+
+      private static Dictionary<char, int> _cardToStr = new Dictionary<char, int>()
+      {
+        { '2', 1 },
+        { '3', 2 },
+        { '4', 3 },
+        { '5', 4 },
+        { '6', 5 },
+        { '7', 6 },
+        { '8', 7 },
+        { '9', 8 },
+        { 'T', 9 },
+        { 'J', 10 },
+        { 'Q', 11 },
+        { 'K', 12 },
+        { 'A', 13 },
+      };
     }
 
-    private static Dictionary<char, int> _cardToStr = new Dictionary<char, int>()
+    private class PartTwoComparer : IComparer<Hand>
     {
-      { '2', 1 },
-      { '3', 2 },
-      { '4', 3 },
-      { '5', 4 },
-      { '6', 5 },
-      { '7', 6 },
-      { '8', 7 },
-      { '9', 8 },
-      { 'T', 9 },
-      { 'J', 10 },
-      { 'Q', 11 },
-      { 'K', 12 },
-      { 'A', 13 },
-    };
+      public int Compare(Hand? x, Hand? y)
+      {
+        for (var i = 0; i < x.Cards.Length; i++)
+        {
+          var card = x.Cards[i];
+          var otherCard = y!.Cards[i];
+
+          var strOfCard = GetStrOfCard(card);
+          var strOfOtherCard = GetStrOfCard(otherCard);
+
+          if (strOfCard > strOfOtherCard)
+          {
+            return 1;
+          }
+          else if (strOfCard < strOfOtherCard)
+          {
+            return -1;
+          }
+        }
+
+        return 0;
+      }
+
+      private int GetStrOfCard(char card)
+      {
+        return _cardToStr[card];
+      }
+
+      private static Dictionary<char, int> _cardToStr = new Dictionary<char, int>()
+      {
+        { 'J', 0 },
+        { '2', 1 },
+        { '3', 2 },
+        { '4', 3 },
+        { '5', 4 },
+        { '6', 5 },
+        { '7', 6 },
+        { '8', 7 },
+        { '9', 8 },
+        { 'T', 9 },
+        { 'Q', 11 },
+        { 'K', 12 },
+        { 'A', 13 },
+      };
+    }
 
     internal const string _testInput = """
       32T3K 765
