@@ -14,6 +14,15 @@ internal static partial class Program
 
     Console.WriteLine("--== PART 1 ==--");
     Console.WriteLine(length);
+
+    var lengths = GetPathLengths_Part2(parsed.Path, parsed.Coordinates);
+
+    Console.WriteLine(string.Join(Environment.NewLine, lengths));
+    
+    var part2Length = LeastCommonMultiple(lengths);
+    
+    Console.WriteLine("--== PART 2 ==--");
+    Console.WriteLine(part2Length);
   }
 
   private static int GetPathLength(string path, IReadOnlyDictionary<string, (string, string)> coordinates)
@@ -43,6 +52,43 @@ internal static partial class Program
     return -1;
   }
 
+  private static List<long> GetPathLengths_Part2(string path, IReadOnlyDictionary<string, (string, string)> coordinates)
+  {
+    return coordinates.Keys
+      .Where(key => key.EndsWith("A"))
+      .Select(startNode => GetPathLengthForNode_Part2(startNode, path, coordinates))
+      .ToList();
+  }
+
+  private static long GetPathLengthForNode_Part2(string node, 
+    string path,
+    IReadOnlyDictionary<string, (string, string)> coordinates)
+  {
+    var length = 0;
+    var currentLocation = node;
+
+    for (var i = 0; i < path.Length; i++)
+    {
+      var direction = path[i];
+      currentLocation = direction switch
+      {
+        'L' => coordinates[currentLocation].Item1,
+        'R' => coordinates[currentLocation].Item2,
+        _ => throw new InvalidOperationException("Invalid path")
+      };
+      length++;
+
+      if (currentLocation.EndsWith("Z"))
+      {
+        return length;
+      }
+
+      path += direction;
+    }
+
+    return -1;
+  }
+
   private static (string Path, Dictionary<string, (string, string)> Coordinates) ParseInput(string input)
   {
     var lines = input.Split(Environment.NewLine).ToList();
@@ -61,6 +107,22 @@ internal static partial class Program
     return (path, directions);
   }
 
+  private static long LeastCommonMultiple(IEnumerable<long> numbers)
+  {
+    return numbers.Aggregate(LeastCommonMultiple);
+  }
+
+  private static long LeastCommonMultiple(long a, long b)
+  {
+    return Math.Abs(a * b) / GreatestCommonDivisor(a, b);
+  }
+
+  private static long GreatestCommonDivisor(long a, long b)
+  {
+    return b == 0 ? a : GreatestCommonDivisor(b, a % b);
+  }
+  
+  
   const string _testInput = """
                             LLR
 
@@ -68,10 +130,23 @@ internal static partial class Program
                             BBB = (AAA, ZZZ)
                             ZZZ = (ZZZ, ZZZ)
                             """;
-  
+
+  const string _testInputPart2 = """
+                                 LR
+
+                                 11A = (11B, XXX)
+                                 11B = (XXX, 11Z)
+                                 11Z = (11B, XXX)
+                                 22A = (22B, XXX)
+                                 22B = (22C, 22C)
+                                 22C = (22Z, 22Z)
+                                 22Z = (22B, 22B)
+                                 XXX = (XXX, XXX)
+                                 """;
+
   const string _input = """
                         LRRLRLRRRLLRLRRRLRLLRLRLRRLRLRRLRRLRLRLLRRRLRRLLRRRLRRLRRRLRRLRLRLLRRLRLRRLLRRRLLLRRRLLLRRLRLRRLRLLRRRLRRLRRRLRRLLRRRLRRRLRRRLRLRRLRLRRRLRRRLRRLRLRRLLRRRLRRLLRRLRRLRLRLRRRLRLLRRRLRRLRRRLLRRLLLLLRRRLRRLLLRRRLRRRLRRLRLLLLLRLRRRLRRRLRLRRLLLLRLRRRLLRRRLRRRLRLRLRRLRRLRRLRLRLLLRLRRLRRLRRRLRRRLLRRRR
-                        
+
                         RBX = (TMF, KTP)
                         RBP = (MKS, MKS)
                         CGR = (XDR, VDX)
@@ -869,6 +944,6 @@ internal static partial class Program
                         """;
 
 
-  [GeneratedRegex("([A-Z]+) = \\(([A-Z]+), ([A-Z]+)\\)", RegexOptions.Compiled)]
+  [GeneratedRegex("([A-Z0-9]+) = \\(([A-Z0-9]+), ([A-Z0-9]+)\\)", RegexOptions.Compiled)]
   private static partial Regex PathRegex();
 }
