@@ -8,9 +8,13 @@ class Program
     var partOneSum = parsedInput.Select(GetNextNumber).Sum();
     Console.WriteLine("--== PART 1 ==--");
     Console.WriteLine(partOneSum);
+    
+    var partTwoSum = parsedInput.Select(input => GetNextNumber(input.Reverse())).Sum();
+    Console.WriteLine("--== PART 2 ==--");
+    Console.WriteLine(partTwoSum);
   }
 
-  static IEnumerable<IEnumerable<int>> ParseInput(string input)
+  private static IEnumerable<IEnumerable<int>> ParseInput(string input)
   {
     var lines = input.Split(Environment.NewLine);
     foreach (var line in lines)
